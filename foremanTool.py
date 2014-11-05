@@ -502,7 +502,7 @@ class ForemanTool(LoggingApp):
         if func == "Host":
             element = self.compile_host_template(element)
         for key in sorted(element.iterkeys()):
-            if type(element[key]) == unicode:
+            if type(element[key]) == unicode or type(element[key]) == str:
                 if element[key].startswith('LookUp('):
                     self.log.debug("Looking up - " + str(key))
                     element[key] = self.lookup_element(conn,element[key])
@@ -533,9 +533,10 @@ class ForemanTool(LoggingApp):
         elif func == "ComputeResource":
             self.log.info("ComputeResource")
             resp = self.create_compute_resource(conn)
-        elif func == "Template":
-            self.log.info("Template")
-            resp = self.create_config_template(conn)
+        elif func == "ProvisionTemplate":
+            self.log.info("ProvisionTemplate")
+            self.params.extra['template_kind_id'] = 4
+            resp = self.create_provision_template(conn)
         elif func == "Domain":
             self.log.info("Domain")
             resp = self.create_domain(conn)
@@ -562,7 +563,10 @@ class ForemanTool(LoggingApp):
             resp = self.create_os(conn)
         elif func == "PartitionTable":
             self.log.info("PartitionTable")
-            resp = self.create_ptable(conn)
+            resp = self.create_partitiontable(conn)
+        elif func == "InstallMedia":
+            self.log.info("InstallMedia")
+            resp = self.create_install_media(conn)
         elif func == "PuppetClass":
             self.log.info("PuppetClass")
             resp = self.create_puppetclass(conn)
@@ -573,7 +577,7 @@ class ForemanTool(LoggingApp):
             self.log.info("Role")
             resp = self.create_role(conn)
         elif func == "Proxy":
-            self.log.info()
+            self.log.info("Proxy")
             resp = self.create_smart_proxy(conn)
         elif func == "Subnet":
             self.log.info("Subnet")
@@ -585,7 +589,7 @@ class ForemanTool(LoggingApp):
             self.log.info("User")
             resp = self.create_user(conn)
         else:
-            self.log.error("I don't know what to do with " + element['name'] + " of type " + cat)
+            self.log.error("I don't know what to do with " + element['name'] + " of type " + func)
             resp = "Error"
         return resp
 
@@ -603,6 +607,25 @@ class ForemanTool(LoggingApp):
             quit("There was a problem creating your " + str(self.params.function))
         return proxy
 
+    def create_model(self,conn):
+        model = {}
+        try:
+            model['name'] = self.params.name
+        except KeyError:
+            quit("Please provide a JSON string with the url in place")
+        if 'hardware_model' in self.params.extra:
+            model['hardware_model'] = self.params.extra['hardware_model']
+        if 'vendor_class' in self.params.extra:
+            model['vendor_class'] = self.params.extra['vendor_class']
+        if 'info' in self.params.extra:
+            model['info'] = self.params.extra['info']
+        try:
+            model = conn.create_models(model)
+        except Exception as e:
+            self.log.error(e)
+            quit("There was a problem creating your " + str(self.params.function))
+        return model
+
     def create_compute_resource(self,conn):
         computeResource = {}
         try:
@@ -614,14 +637,16 @@ class ForemanTool(LoggingApp):
             computeResource['provider'] = self.params.extra['provider']
         except KeyError:
             quit("Please deliver a json string with - password, url, description, user and provider values ")
+        if 'datacenter' in self.params.extra:
+            computeResource['datacenter'] = self.params.extra['datacenter']
         if 'server' in self.params.extra:
-            ComputeResource['server'] = self.params.extra['server']
+            computeResource['server'] = self.params.extra['server']
         if 'uuid' in self.params.extra:
-            ComputeResource['uuid'] = self.params.extra['uuid']
+            computeResource['uuid'] = self.params.extra['uuid']
         if 'tenant' in self.params.extra:
-            ComputeResource['tenant'] = self.params.extra['tenant']
+            computeResource['tenant'] = self.params.extra['tenant']
         if 'region' in self.params.extra:
-            ComputeResource['region'] = self.params.extra['region']
+            computeResource['region'] = self.params.extra['region']
         try:
             resource = conn.create_compute_resources(computeResource)
         except Exception as e:
@@ -633,10 +658,11 @@ class ForemanTool(LoggingApp):
         subnet = {}
         try:
             subnet['name'] = self.params.name
-            subnet['mask'] = self.params.extra['subnetmask']
+            subnet['mask'] = self.params.extra['mask']
             subnet['network'] = self.params.extra['network']
 
-        except KeyError:
+        except KeyError as e:
+            self.log.debug(e)
             quit("Please enter a valid JSON string with name, subnetmask, network")
         if 'vlanid' in self.params.extra:
             subnet['vlanid'] = self.params.extra['vlanid']
@@ -757,6 +783,10 @@ class ForemanTool(LoggingApp):
             os['major'] = self.params.extra['major']
         except KeyError:
             quit('Please provide a valid JSON string')
+        if 'family' in self.params.extra:
+            os['family'] = self.params.extra['family']
+        if 'architecture_ids' in self.params.extra:
+            os['architecture_ids'] = self.params.extra['architecture_ids']
         try:
             operatingsys = conn.create_operatingsystems(os)
         except Exception as e:
@@ -813,7 +843,7 @@ class ForemanTool(LoggingApp):
         if 'template_combinations_attributes' in self.params.extra:
             ptemp['template_combinations_attributes'] = self.params.extra['template_combinations_attributes']
         try:
-            ptemp = conn.create_config_templates(ptable)
+            ptemp = conn.create_config_templates(ptemp)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem creating your " + str(self.params.function))
@@ -907,7 +937,7 @@ class ForemanTool(LoggingApp):
     def create_partitiontable(self,conn):
         ptable = {}
         try:
-            ptable['layout'] = self.params.extra['layout']
+            ptable['layout'] = open(str(self.params.extra['layout'])).read()
             ptable['name'] = self.params.name
         except KeyError as e:
             self.log.debug(e)
@@ -1269,7 +1299,7 @@ class ForemanTool(LoggingApp):
             self.log.debug(e)
             quit('Please provide a Valid JSON string')
             try:
-                ptemp['template'] = open(str(self.params.extra['layout'])).read()
+                ptemp['template'] =open(str(self.params.extra['layout'])).read()
             except IOError as e:
                 self.log.debug(e)
                 quit("Could not find partition layout")
@@ -1283,8 +1313,6 @@ class ForemanTool(LoggingApp):
             ptemp['snippet'] = self.params.extra['snippet']
         if 'audit_comment' in self.params.extra:
             ptemp['audit_comment'] = self.params.extra['audit_comment']
-        if 'template_kind_id' in self.params.extra:
-            ptemp['template_kind_id'] = self.params.extra['template_kind_id']
         if 'template_combinations_attributes' in self.params.extra:
             ptemp['template_combinations_attributes'] = self.params.extra['template_combinations_attributes']
         try:
