@@ -91,7 +91,6 @@ class ForemanTool(LoggingApp):
             self.log.info(conn.show_compute_resources(i))
             resp = conn.destroy_compute_resources(i)
         elif func == "Template":
-            self.log.info(conn.show_templates(i))
             resp = conn.destroy_config_templates(i)
         elif func == "Domain":
             self.log.info(conn.show_domains(i))
@@ -149,23 +148,79 @@ class ForemanTool(LoggingApp):
     def update(self,conn):
         func = self.params.function
         i = self.index_instances(conn)
+        self.log.debug("returned from index:" + str(i))
         if len(i) == 0:
             quit("Could not find what you wanted to update - Please try again")
         if len(i) > 1:
             for item in i:
+                upda = item
+                if 'id' in upda:
+                    ids = upda['id']
+                else:
+                    for item in upda.keys():
+                        if 'id' in upda[item]:
+                            ids = upda[item]['id']
+                            break
                 if self.params.auto != True:
-                    resp = raw_input("\nWould you like to Delete " + host['host']['name']  + "?: [y/n]")
+                    resp = raw_input("\nWould you like to Update " + host['host']['name']  + "?: [y/n]")
                     if resp in ['y','ye','yes','Y','Ye','Yes','YES', 'YE']:
-                        self.updater(conn,item['id'],func)
+                        self.updater(conn,ids,func)
                     else:
                         self.log.warn("Not operating on " + str(host_id) + " - " + host['host']['name'] )
                     continue
                 else:
-                    self.updater(conn,item['id'],func)
+                    self.updater(conn,ids,func)
         else:
-            self.updater(conn,i['id'],func)
+            upda = i[0]
+            if 'id' in upda:
+                self.updater(conn,upda['id'],func)
+            else:
+                for item in upda.keys():
+                    if 'id' in upda[item]:
+                        self.updater(conn,upda[item]['id'],func)
+                        break
 
     def updater(self,conn,i,func):
+        element = self.params.extra
+        element['id'] = i
+        rstN = self.params.name
+        if func == "Host":
+            element = self.compile_host_template(element)
+        for key in sorted(element.iterkeys()):
+            if type(element[key]) == unicode or type(element[key]) == str:
+                if element[key].startswith('LookUp('):
+                    self.log.debug("Looking up - " + str(key))
+                    element[key] = self.lookup_element(conn,element[key])
+            elif type(element[key]) == list:
+                replacement = []
+                for i in element[key]:
+                    if type(i) == int:
+                        continue
+                    if i.startswith('LookUp('):
+                        self.log.debug("Looking up - " + str(key))
+                        replacement.append(self.lookup_element(conn,i))
+                element[key] = replacement
+            elif type(element[key]) == dict:
+                for key2 in element[key]:
+                    if type(element[key][key2]) == int:
+                        continue
+                    if type(element[key][key2]) == dict:
+                        for key3 in element[key][key2]:
+                            if type(element[key][key2][key3]) == int:
+                                continue
+                            if element[key][key2][key3].startswith('LookUp('):
+                                self.log.debug("Looking up - " + str(key3))
+                                element[key][key2][key3] = self.lookup_element(conn,element[key][key2][key3])
+                        continue
+                    if element[key][key2].startswith('LookUp('):
+                        self.log.debug("Looking up - " + str(key2))
+                        element[key][key2] = self.lookup_element(conn,element[key][key2])
+        self.log.debug("Element now looks like:")
+        self.log.debug(element)
+        i = str(self.params.extra['id'])
+        self.params.function = func
+        self.params.name = rstN
+        self.params.extra = element
         if func == "Architecture":
             self.log.info(conn.show_architectures(i))
             resp = self.update_architecture(conn,i)
@@ -181,9 +236,8 @@ class ForemanTool(LoggingApp):
         elif func == "ComputeResource":
             self.log.info(conn.show_compute_resources(i))
             resp = self.update_compute_resource(conn,i)
-        elif func == "Template":
-            self.log.info(conn.show_templates(i))
-            resp = self.update_config_template(conn,i)
+        elif func == "ProvisionTemplate":
+            resp = self.update_provision_template(conn,i)
         elif func == "Domain":
             self.log.info(conn.show_domains(i))
             resp = self.update_domain(conn,i)
@@ -196,12 +250,15 @@ class ForemanTool(LoggingApp):
         elif func == "Host":
             self.log.info(conn.show_hosts(i))
             resp = conn.update_host(conn,i)
+        elif func == "ProvisionTemplate":
+            self.log.info(conn.show_config_templates(i))
+            resp = self.update_provision_template(conn,i)
         elif func == "LookupKey":
             self.log.info(conn.show_lookup_keys(i))
             resp = self.update_lookup_key(conn,i)
-        elif func == "Media":
+        elif func == "InstallMedia":
             self.log.info(conn.show_media(i))
-            resp = self.update_media(conn,i)
+            resp = self.update_install_media(conn,i)
         elif func == "Model":
             self.log.info(conn.show_models(i))
             resp = self.update_model(conn,i)
@@ -280,7 +337,7 @@ class ForemanTool(LoggingApp):
                 resp = conn.index_hostgroups(page=page)
             elif function == "LookupKey":
                 resp = conn.index_lookup_keys(page=page)
-            elif function == "Media": 
+            elif function == "InstallMedia": 
                 resp = conn.index_media(page=page)
             elif function == "Model":
                 resp = conn.index_models(page=page)
@@ -300,8 +357,10 @@ class ForemanTool(LoggingApp):
                 resp = conn.index_smart_proxies(page=page)
             elif function == "Subnet":
                 resp = conn.index_subnets(page=page)
-            elif function == "Template":
+            elif function == "TemplateKind":
                 resp = conn.index_template_kinds(page=page)
+            elif function == "ProvisionTemplate":
+                resp = conn.index_config_templates(page=page)
             elif function == "UserGroup":
                 resp = conn.index_usergroups(page=page)
             elif function == "User":
@@ -393,10 +452,13 @@ class ForemanTool(LoggingApp):
                 self.log.info(info)
             except foreman.client.ForemanException as e:
                 self.log.debug(e)
-                print json.loads(e.res.text)['host']['errors']['base'][0]
-                if "Could not start VMX: Out of memory" in json.loads(e.res.text)['host']['errors']['base'][0]:
-                    self.log.info("VMX Error from vSphere - will retry!")
-                    self.create_host(conn)
+                try:
+                    if "Could not start VMX: Out of memory" in json.loads(e.res.text)['host']['errors']['base'][0]:
+                        self.log.info("VMX Error from vSphere - will retry!")
+                        self.create_host(conn)
+                except KeyError as e:
+                    self.log.debug(e)
+                    continue
             index += 1
 
     def todo(self,conn):
@@ -470,6 +532,7 @@ class ForemanTool(LoggingApp):
             if method == "create":
                 self.log.error(self.create(conn,element))
             elif method == "update":
+                self.params.extra = element
                 self.log.error(self.update(conn))
             elif method == "delete":
                 self.log.error(self.delete_instances(conn))
@@ -523,7 +586,7 @@ class ForemanTool(LoggingApp):
             resp = self.create_architecture(conn)
         elif func == "LDAP":
             self.log.info("LDAP")
-            resp = self.create_auth_source_ldaps(conn)
+            resp = self.create_ldap(conn)
         elif func == "Bookmark":
             self.log.info("Bookmark")
             resp = self.create_bookmark(conn)
@@ -787,6 +850,10 @@ class ForemanTool(LoggingApp):
             os['family'] = self.params.extra['family']
         if 'architecture_ids' in self.params.extra:
             os['architecture_ids'] = self.params.extra['architecture_ids']
+        if 'ptable_ids' in self.params.extra:
+            os['ptable_ids'] = self.params.extra['ptable_ids']
+        if 'medium_ids' in self.params.extra:
+            os['medium_ids'] = self.params.extra['medium_ids']
         try:
             operatingsys = conn.create_operatingsystems(os)
         except Exception as e:
@@ -816,6 +883,8 @@ class ForemanTool(LoggingApp):
             install['os_family'] = self.params.extra['os_family']
         except KeyError:
             quit('Please provide a Valid JSON string')
+        if "operatingsystem_ids" in self.params.extra:
+            install['operatingsystem_ids'] = self.params.extra['operatingsystem_ids']
         try:
             installation = conn.create_media(install)
         except Exception as e:
@@ -871,13 +940,14 @@ class ForemanTool(LoggingApp):
             auth_source_ldap['attr_login'] = self.params.extra['attr_login']
             auth_source_ldap['name'] = self.params.name
             auth_source_ldap['attr_mail'] = self.params.extra['attr_mail']
-            auth_source_ldap['account_password'] = self.params.extra['account_password']
-            auth_source_ldap['attr_firstname'] = self.params.extra['arttr_firstname']
+            auth_source_ldap['attr_firstname'] = self.params.extra['attr_firstname']
             auth_source_ldap['host'] = self.params.extra['host']
             auth_source_ldap['attr_lastname'] = self.params.extra['attr_lastname']
         except KeyError as e:
             self.log.debug(e)
             quit("Cannot create " + str(self.params.function))
+        if 'account_password' in self.params.extra:
+            auth_source_ldap['account_password'] = self.params.extra['account_password']
         if 'tls' in self.params.extra:
             auth_source_ldap['tls'] = self.params.extra['tls']
         if 'port' in self.params.extra:
@@ -1047,7 +1117,7 @@ class ForemanTool(LoggingApp):
         if 'medium_id' in self.params.extra:
             host['medium_id'] = self.params.extra['medium_id']
         try:
-            host = conn.update_hosts(host)
+            host = conn.update_hosts(host['id'],host)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1065,7 +1135,7 @@ class ForemanTool(LoggingApp):
             if 'url' in self.params.extra:
                 smartProxy['url'] = self.params.extra['url']
         try:
-            proxy = conn.update_smart_proxies(smartProxy)
+            proxy = conn.update_smart_proxies(smartProxy['id'],smartProxy)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1098,7 +1168,7 @@ class ForemanTool(LoggingApp):
         if 'region' in self.params.extra:
             ComputeResource['region'] = self.params.extra['region']
         try:
-            resource = conn.update_compute_resources(computeResource)
+            resource = conn.update_compute_resources(computeResource['id'],computeResource)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1137,7 +1207,7 @@ class ForemanTool(LoggingApp):
         if 'tftp_id' in self.params.extra:
             subnet['tftp_id'] = self.params.extra['tftp_id']
         try:
-            sub = conn.update_subnets(subnet)
+            sub = conn.update_subnets(subnet['subnet'],subnet)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1158,7 +1228,7 @@ class ForemanTool(LoggingApp):
         if 'domain_parameters_attributes' in self.params.extra:
             domain['domain_parameters_attributes'] = self.params.extra['domain_parameters_attributes']
         try:
-            dom = conn.update_domains(domain)
+            dom = conn.update_domains(domain['domain'],domain)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1195,7 +1265,7 @@ class ForemanTool(LoggingApp):
         if 'domain_id' in self.params.extra:
             hostgroup['domain_id'] = self.params.extra['domain_id']
         try:
-            hostgroup = conn.update_hostgroups(hostgroup)
+            hostgroup = conn.update_hostgroups(hostgroup['id'],hostgroup)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1210,7 +1280,7 @@ class ForemanTool(LoggingApp):
         if 'new_name' in self.params.extra:
             puppetclass['name'] = self.params.extra['new_name']
         try:
-            pclass = conn.update_puppetclasses(puppetclass)
+            pclass = conn.update_puppetclasses(puppetclass['id'],puppetclass)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1231,7 +1301,7 @@ class ForemanTool(LoggingApp):
         if 'info' in self.params.extra:
             hardware['info'] = self.params.extra['info']
         try:
-            model = conn.update_models(hardware)
+            model = conn.update_models(hardware['id'],hardware)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1249,8 +1319,10 @@ class ForemanTool(LoggingApp):
             os['minor'] = self.params.extra['minor']
         if 'major' in self.params.extra:
             os['major'] = self.params.extra['major']
+        if 'os_default_templates_attributes' in self.params.extra:
+            os['os_default_templates_attributes'] = self.params.extra['os_default_templates_attributes']
         try:
-            operatingsys = conn.update_operatingsystems(os)
+            operatingsys = conn.update_operatingsystems(os['id'],os)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1266,7 +1338,7 @@ class ForemanTool(LoggingApp):
         if 'new_name' in self.params.extra:
             env['name'] = self.params.extra['new_name']
         try:
-            environment = conn.update_environments(env)
+            environment = conn.update_environments(env['id'],env)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1282,13 +1354,16 @@ class ForemanTool(LoggingApp):
             install['name'] = self.params.extra['new_name']
         if 'path' in self.params.extra:
             install['path'] = self.params.extra['path']
+        if 'operatingsystem_ids' in self.params.extra:
+            install['operatingsystem_ids'] = self.params.extra['operatingsystem_ids']
         if 'os_family' in self.params.extra:
             install['os_family'] = self.params.extra['os_family']
         try:
-            installation = conn.update_media(install)
+            installation = conn.update_media(install['id'],install)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
+        quit(installation)
         return installation
 
     def update_provision_template(self,conn,i):
@@ -1299,7 +1374,7 @@ class ForemanTool(LoggingApp):
             self.log.debug(e)
             quit('Please provide a Valid JSON string')
             try:
-                ptemp['template'] =open(str(self.params.extra['layout'])).read()
+                ptemp['template']=open(str(self.params.extra['layout'])).read()
             except IOError as e:
                 self.log.debug(e)
                 quit("Could not find partition layout")
@@ -1316,7 +1391,7 @@ class ForemanTool(LoggingApp):
         if 'template_combinations_attributes' in self.params.extra:
             ptemp['template_combinations_attributes'] = self.params.extra['template_combinations_attributes']
         try:
-            ptemp = conn.update_config_templates(ptable)
+            ptemp = conn.update_config_templates(ptemp['id'],ptemp)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1356,7 +1431,7 @@ class ForemanTool(LoggingApp):
         if 'account_password' in self.params.extra:
             auth_source_ldap['account_password'] = self.params.extra['account_password']
         if 'attr_firstname' in self.params.extra:
-            auth_source_ldap['attr_firstname'] = self.params.extra['arttr_firstname']
+            auth_source_ldap['attr_firstname'] = self.params.extra['attr_firstname']
         if 'host' in self.params.extra:
             auth_source_ldap['host'] = self.params.extra['host']
         if 'attr_lastname' in self.params.extra:
