@@ -63,10 +63,11 @@ class ForemanTool(LoggingApp):
             quit("There are no instances that match what you are looking for.. quitting!")
         for host in hosts:
             host_id = host['host']['id']
+            print host
             if self.params.auto != True:
                 resp = raw_input("\nWould you like to Delete " + host['host']['name']  + "?: [y/n]")
                 if resp in ['y','ye','yes','Y','Ye','Yes','YES', 'YE']:
-                    conn.destroy(host_id)
+                    conn.destroy_hosts(host_id)
                 else:
                     self.log.warn("Not operating on " + str(host_id) + " - " + host['host']['name'] )
                     continue
@@ -267,7 +268,7 @@ class ForemanTool(LoggingApp):
             resp = self.update_os(conn,i)
         elif func == "PartitionTable":
             self.log.info(conn.show_ptables(i))
-            resp = self.update_ptable(conn,i)
+            resp = self.update_partitiontable(conn,i)
         elif func == "PuppetClass":
             self.log.info(conn.show_puppetclasses(i))
             resp = self.update_puppetclass(conn,i)
@@ -1500,18 +1501,18 @@ class ForemanTool(LoggingApp):
     def update_partitiontable(self,conn,i):
         ptable = {}
         try:
-            ptable['id'] = i
+            ptable['id'] = int(i)
         except KeyError as e:
             self.log.debug(e)
             quit("Cannot update " + str(self.params.function))
         if 'layout' in self.params.extra:
-            ptable['layout'] = self.params.extra['layout']
+            ptable['layout'] = open(str(self.params.extra['layout'])).read()
         if 'new_name' in self.params.extra:
             ptable['name'] = self.params.extra['new_name']
         if 'os_family' in self.params.extra:
             ptable['os_family'] = self.params.extra['os_family']
         try:
-           ptable  = conn.update_ptables(ptable)
+            ptable  = conn.update_ptables(ptable['id'],ptable)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1625,6 +1626,7 @@ class ForemanTool(LoggingApp):
                 self.params.extra = self.detokenize_scripts(self.params.extra,True)
             self.update(connection)
         elif mode == "delete":
+            print "boo"
             self.delete_instances(connection)
         elif mode == "runlist":
             self.deploy_runlist(connection)
