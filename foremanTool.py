@@ -18,6 +18,7 @@ __author__ = ['Paul.Hardy']
 
 class ForemanTool(LoggingApp):
 
+
     def get_connection(self, config):
         try:
             connection = Foreman(str(config["protocol"]) + "://" + str(config["hostname"]) + ":" + str(config["hostport"]), (str(config["username"]), str(config["password"])))
@@ -63,7 +64,6 @@ class ForemanTool(LoggingApp):
             quit("There are no instances that match what you are looking for.. quitting!")
         for host in hosts:
             host_id = host['host']['id']
-            print host
             if self.params.auto != True:
                 resp = raw_input("\nWould you like to Delete " + host['host']['name']  + "?: [y/n]")
                 if resp in ['y','ye','yes','Y','Ye','Yes','YES', 'YE']:
@@ -426,13 +426,15 @@ class ForemanTool(LoggingApp):
                 else:
                     self.log.error(host)
             returned.append(host)
-        if self.params.pretty and self.params.mode == "index":
+        if self.params.pretty == True and self.params.mode == "index":
             print table.get_string(sortby="id")
         return returned
 
     def create_host(self,conn):
+        settings = yaml.load(open(self.params.config))['settings']
         basename = self.params.name
         if basename[-1].isdigit() == True:
+            #sort this out
             zfill = 1
             while basename[-zfill].isdigit() == True:
                 zfill += 1
@@ -440,13 +442,16 @@ class ForemanTool(LoggingApp):
             index = int(basename[-zfill:])
         else:
             index = len(self.index_instances(conn))
-            zfill = 3
+            zfill = len(settings['instance_zfill'])
         data = self.params.extra
         if 'ip' in self.params.extra:
-            data['ip'] = self.params.extra['ip']
+            data['interfaces_attributes']['new_interfaces']['ip'] = self.params.extra['ip']
         if 'mac' in self.params.extra:
             data['mac'] = self.params.extra['mac']
-        for i in range(index, index + self.params.number):
+            data['interfaces_attributes']['new_interfaces']['mac'] = self.params.extra['mac']
+        #switch for while loop
+        total = index + int(self.params.number)
+        while index <= total:
             data['name'] = basename + '-'  + str(index + 1).zfill(zfill)
             try:
                 info = conn.create_hosts(data)
@@ -455,8 +460,7 @@ class ForemanTool(LoggingApp):
                 self.log.debug(e)
                 try:
                     if "Could not start VMX: Out of memory" in json.loads(e.res.text)['host']['errors']['base'][0]:
-                        self.log.info("VMX Error from vSphere - will retry!")
-                        self.create_host(conn)
+                        index -= 1
                 except KeyError as e:
                     self.log.debug(e)
                     continue
@@ -466,6 +470,7 @@ class ForemanTool(LoggingApp):
         print dir(conn)
 
     def detokenize_scripts(self,script,read=False):
+        settings = yaml.load(open(self.params.config))['settings']
         try:
             from definitions import definitions
         except Exception as e:
@@ -473,7 +478,7 @@ class ForemanTool(LoggingApp):
             self.log.error("No Definitions file found! Script will not be detokenized!")
             return open(script, "r").read()
         config = definitions(self)
-        regex= re.compile('@.*@')
+        regex= re.compile(settings['token_char'] + '.*' + settings['token_char'])
         index = 0
         self.log.debug(script)
         try:
@@ -555,8 +560,9 @@ class ForemanTool(LoggingApp):
             quit("There has been a problem...")
         if 'number' in element:
             self.params.number = int(element['number'])
+        settings = yaml.load(open(self.params.config))['settings']
         for key in element:
-            host_template = host_template.replace("@" + str(key) + "@", str(element[key]))
+            host_template = host_template.replace(settings['token_char'] + str(key) + settings['token_char'], str(element[key]))
         host_template = json.loads(host_template)
         return dict(host_template)
 
@@ -574,7 +580,7 @@ class ForemanTool(LoggingApp):
                 replacement = []
                 for i in element[key]:
                     if i.startswith('LookUp('):
-                        self.log.debug("Looking up - " + str(key))
+                        self.log.debug("Looking up - " + str(i))
                         replacement.append(self.lookup_element(conn,i))
                 element[key] = replacement
         self.log.debug("Element now looks like:")
@@ -1208,7 +1214,7 @@ class ForemanTool(LoggingApp):
         if 'tftp_id' in self.params.extra:
             subnet['tftp_id'] = self.params.extra['tftp_id']
         try:
-            sub = conn.update_subnets(subnet['subnet'],subnet)
+            sub = conn.update_subnets(subnet['id'],subnet)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1229,7 +1235,7 @@ class ForemanTool(LoggingApp):
         if 'domain_parameters_attributes' in self.params.extra:
             domain['domain_parameters_attributes'] = self.params.extra['domain_parameters_attributes']
         try:
-            dom = conn.update_domains(domain['domain'],domain)
+            dom = conn.update_domains(domain['id'],domain)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1410,7 +1416,7 @@ class ForemanTool(LoggingApp):
         if 'operatingsystem_ids' in self.params.extra:
             architecture['operatingsystem_ids'] = self.params.extra['operatingsystem_ids']
         try:
-            architecture = conn.update_architectures(architecture)
+            architecture = conn.update_architectures(architecture['id'],architecture)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1448,7 +1454,7 @@ class ForemanTool(LoggingApp):
         if 'base_dn' in self.params.extra:
             auth_source_ldap['base_dn'] = self.params.extra['base_dn']
         try:
-           auth_source_ldap = conn.update_auth_source_ldaps(auth_source_ldap)
+           auth_source_ldap = conn.update_auth_source_ldaps(auth_source_ldap['id'],auth_source_ldap)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1466,7 +1472,7 @@ class ForemanTool(LoggingApp):
         if 'new_name' in self.params.extra:
             common_parameter['name'] = self.params.extra["new_name"]
         try:
-             common_paramter = conn.update_common_paramters(common_paramter)
+             common_paramter = conn.update_common_paramters(common_paramter['id'],common_paramter)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1492,7 +1498,7 @@ class ForemanTool(LoggingApp):
         if 'lookup_values_count' in self.params.extra:
             lookup_key['lookup_values_count'] = self.params.extra['lookup_values_count']
         try:
-           lookup_key = conn.update_lookup_keys(lookup_key)
+           lookup_key = conn.update_lookup_keys(lookup_key['id'],lookup_key)
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
@@ -1528,7 +1534,7 @@ class ForemanTool(LoggingApp):
         if 'new_name' in self.params.extra:
             role['name'] = self.params.extra['new_name']
         try:
-            role = conn.update_roles(role)
+            role = conn.update_roles(role['id'],role)
         except Exception as e:
             self.log.error("Not enough detail provided with element - Unsure what to do - Skipping!")
             return
@@ -1544,7 +1550,7 @@ class ForemanTool(LoggingApp):
         if 'new_name' in self.params.extra:
             usergroup['name'] = self.params.extra['new_name']
         try:
-            usergroup = conn.update_usergroups(usergroup)
+            usergroup = conn.update_usergroups(usergroup['id'],usergroup)
         except Exception as e:
             self.log.error("Not enough detail provided with element - Unsure what to do - Skipping!")
             return
@@ -1572,7 +1578,7 @@ class ForemanTool(LoggingApp):
         if 'lastname' in self.params.extra:
             user['lastname'] = self.params.extra['lastname']
         try:
-            user = conn.update_users(user)
+            user = conn.update_users(user['id'],user)
         except Exception as e:
             self.log.error("Not enough detail provided with element - Unsure what to do - Skipping!")
             return
@@ -1583,6 +1589,7 @@ class ForemanTool(LoggingApp):
         self.params.function = element[element.find("(")+1:element.find(")")].split(':')[0]
         self.log.debug("Looking up type: " + str(self.params.function) + " and searching for: " + self.params.name)
         elements = self.index_instances(conn)
+        print elements
         if len(elements) == 0:
             self.log.error("Could not Look up " + str(element))
             returned = ""
@@ -1592,6 +1599,7 @@ class ForemanTool(LoggingApp):
         else:
             returned = elements[0]
         if "id" not in returned:
+            print returned
             returned = returned[returned.keys()[0]]
         return int(returned['id'])
 
@@ -1626,7 +1634,6 @@ class ForemanTool(LoggingApp):
                 self.params.extra = self.detokenize_scripts(self.params.extra,True)
             self.update(connection)
         elif mode == "delete":
-            print "boo"
             self.delete_instances(connection)
         elif mode == "runlist":
             self.deploy_runlist(connection)
