@@ -299,6 +299,10 @@ class ForemanTool(LoggingApp):
         returned = []
         page = 1
         try:
+            per_page = yaml.load(open(self.params.config))['settings']['entries_per_page']
+        except KeyError:
+            per_page = 100
+        try:
             function = self.params.function
         except Exception as e:
             self.log.debug(e)
@@ -309,63 +313,63 @@ class ForemanTool(LoggingApp):
             search = self.params.name
         while True:
             if function == "Host":
-                resp = conn.index_hosts(page=page)
+                resp = conn.index_hosts(page=page,per_page=per_page)
             elif function == "Architecture":
-                resp = conn.index_architectures(page=page)
+                resp = conn.index_architectures(page=page,per_page=per_page)
             elif function == "Audit":
-                resp = conn.index_audits(page=page)
+                resp = conn.index_audits(page=page,per_page=per_page)
             elif function == "LDAP":
-                resp = conn.index_auth_source_ldaps(page=page)
+                resp = conn.index_auth_source_ldaps(page=page,per_page=per_page)
             elif function == "Bookmark":
-                resp = conn.index_bookmarks(page=page) 
+                resp = conn.index_bookmarks(page=page,per_page=per_page) 
             elif function == "Parameter":
-                resp = conn.index_common_parameters(page=page)
+                resp = conn.index_common_parameters(page=page,per_page=per_page)
             elif function == "ComputeResource":
-                resp = conn.index_compute_resources(page=page)
+                resp = conn.index_compute_resources(page=page,per_page=per_page)
             elif function == "ConfigTemplate":
-                resp = conn.index_config_templates(page=page)
+                resp = conn.index_config_templates(page=page,per_page=per_page)
             elif function == "Dashboard":
                 resp = conn.index_dashboard(search=search)
             elif function == "Domain":
-                resp = conn.index_domains(page=page)
+                resp = conn.index_domains(page=page,per_page=per_page)
             elif function == "Environment":
-                resp = conn.index_environments(page=page)
+                resp = conn.index_environments(page=page,per_page=per_page)
             elif function == "Value":
-                resp = conn.index_fact_values(page=page)
+                resp = conn.index_fact_values(page=page,per_page=per_page)
             elif function == "Home":
                 resp = conn.index_home()
             elif function == "HostGroup":
-                resp = conn.index_hostgroups(page=page)
+                resp = conn.index_hostgroups(page=page,per_page=per_page)
             elif function == "LookupKey":
-                resp = conn.index_lookup_keys(page=page)
+                resp = conn.index_lookup_keys(page=page,per_page=per_page)
             elif function == "InstallMedia": 
-                resp = conn.index_media(page=page)
+                resp = conn.index_media(page=page,per_page=per_page)
             elif function == "Model":
-                resp = conn.index_models(page=page)
+                resp = conn.index_models(page=page,per_page=per_page)
             elif function == "OperatingSystem":
-                resp = conn.index_operatingsystems(page=page)
+                resp = conn.index_operatingsystems(page=page,per_page=per_page)
             elif function == "PartitionTable":
-                resp = conn.index_ptables(page=page)
+                resp = conn.index_ptables(page=page,per_page=per_page)
             elif function == "PuppetClass":
-                resp = conn.index_puppetclasses(page=page)
+                resp = conn.index_puppetclasses(page=page,per_page=per_page)
             elif function == "Report":
-                resp = conn.index_reports(page=page)
+                resp = conn.index_reports(page=page,per_page=per_page)
             elif function == "Role":
-                resp = conn.index_roles(page=page)
+                resp = conn.index_roles(page=page,per_page=per_page)
             elif function == "Setting":
-                resp = conn.index_settings(page=page)
+                resp = conn.index_settings(page=page,per_page=per_page)
             elif function == "Proxy":
-                resp = conn.index_smart_proxies(page=page)
+                resp = conn.index_smart_proxies(page=page,per_page=per_page)
             elif function == "Subnet":
-                resp = conn.index_subnets(page=page)
+                resp = conn.index_subnets(page=page,per_page=per_page)
             elif function == "TemplateKind":
-                resp = conn.index_template_kinds(page=page)
+                resp = conn.index_template_kinds(page=page,per_page=per_page)
             elif function == "ProvisionTemplate":
-                resp = conn.index_config_templates(page=page)
+                resp = conn.index_config_templates(page=page,per_page=per_page)
             elif function == "UserGroup":
-                resp = conn.index_usergroups(page=page)
+                resp = conn.index_usergroups(page=page,per_page=per_page)
             elif function == "User":
-                resp = conn.index_users(page=page)
+                resp = conn.index_users(page=page,per_page=per_page)
             else:
                 quit("This function does not exists yet")
             if len(resp) < 1:
@@ -451,7 +455,7 @@ class ForemanTool(LoggingApp):
             data['interfaces_attributes']['new_interfaces']['mac'] = self.params.extra['mac']
         #switch for while loop
         total = index + int(self.params.number)
-        while index <= total:
+        while index < total:
             data['name'] = basename + '-'  + str(index + 1).zfill(zfill)
             try:
                 info = conn.create_hosts(data)
@@ -1585,11 +1589,10 @@ class ForemanTool(LoggingApp):
         return user
 
     def lookup_element(self,conn,element):
-        self.params.name = element[element.find("(")+1:element.find(")")].split(':')[1]
-        self.params.function = element[element.find("(")+1:element.find(")")].split(':')[0]
+        self.params.name = element[element.find("(")+1:element.find(")")].split(':',1)[1]
+        self.params.function = element[element.find("(")+1:element.find(")")].split(':',1)[0]
         self.log.debug("Looking up type: " + str(self.params.function) + " and searching for: " + self.params.name)
         elements = self.index_instances(conn)
-        print elements
         if len(elements) == 0:
             self.log.error("Could not Look up " + str(element))
             returned = ""

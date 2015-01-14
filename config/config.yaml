@@ -5,6 +5,7 @@ settings:
     https: "https://127.0.0.1:8080"
   token_char: "@" 
   instance_zfill: "000"
+  entries_per_page: 100 #Thanks to @beeva-javiermartincaro for the performance increase! - Controls number of instances brought back from an index - set high for large estates.
   
 foreman:
   Farm-A: #Farm name decalred with -f
