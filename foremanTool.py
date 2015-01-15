@@ -378,7 +378,14 @@ class ForemanTool(LoggingApp):
             if function == "PuppetClass":
                 temp = []
                 for w in resp:
-                    temp.append(resp[w][0]['puppetclass'])
+                # Loop for extracting subclasses from name
+                    length=len(resp[w])
+                    if length > 1: 
+                        for i in range(length):
+                            temp.append(resp[w][i]['puppetclass'])
+                    else:
+                        temp.append(resp[w][0]['puppetclass'])
+                # End loop
                 resp = temp
             hosts += resp
         if search != None:
