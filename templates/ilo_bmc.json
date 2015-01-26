@@ -1,0 +1,55 @@
+{
+    "name":"@name@",
+    "root_pass":"@root_pass@",
+    "comment":"@comment@",
+    "environment_id":"@environment_id@",
+    "managed": "true",
+    "model_id": "",
+    "provision_method": "build",
+    "interfaces_attributes": {
+      "new_interfaces": {
+        "_destroy": "false",
+		    "type": "Nic::Managed",
+		    "mac": "",
+		    "name": "",
+		    "domain_id": "",
+		    "ip": "",
+		    "provider": "IPMI"
+      },
+      "new_1421776871214": {
+		    "_destroy": "false",
+		    "type": "Nic::BMC",
+		    "mac": "@bmc_mac@",
+		    "name":"@bmc_fqdn@",
+		    "domain_id": "",
+		    "ip": "@bmc_ip@",
+		    "username": "@bmc_user@",
+		    "password": "@bmc_password@",
+		    "provider": "IPMI"
+      }
+    },
+    "disk": "",
+		"domain_id":"@domain_id@",
+		"overwrite":"false",
+		"compute_resource_id": "@compute_resource_id@",
+    "puppet_status": 1,
+		"subnet_id": "@subnet_id@",
+    "ip": "@ip@",
+    "mac": "@mac@",
+		"architecture_id": "@architecture_id@",
+		"build" : "1",
+		"type": "Host::Managed",
+		"operatingsystem_id":"@operatingsystem_id@",
+		"puppet_ca_proxy_id":"@puppet_ca_proxy_id@",
+		"puppet_proxy_id":"@puppet_proxy_id@",
+		"ptable_id":"@ptable_id@",
+		"medium_id":"@medium_id@",
+		"enabled": 1,
+		"hostgroup_id": "@hostgroup_id@",
+		"puppetclass_ids": []
+}
+
+
+
+
+
