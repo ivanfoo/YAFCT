@@ -456,12 +456,6 @@ class ForemanTool(LoggingApp):
             index = len(self.index_instances(conn))
             zfill = len(settings['instance_zfill'])
         data = self.params.extra
-        if 'ip' in self.params.extra:
-            data['ip'] = self.params.extra['ip']
-            #data['interfaces_attributes']['new_interfaces']['ip'] = self.params.extra['ip']
-        if 'mac' in self.params.extra:
-            data['mac'] = self.params.extra['mac']
-            #data['interfaces_attributes']['new_interfaces']['mac'] = self.params.extra['mac']
         #switch for while loop
         total = index + int(self.params.number)
         while index < total:
@@ -577,6 +571,12 @@ class ForemanTool(LoggingApp):
         for key in element:
             host_template = host_template.replace(settings['token_char'] + str(key) + settings['token_char'], str(element[key])).replace("'",'"')
         host_template = json.loads(host_template)
+        if 'mac' in element:
+            self.params.number = 1 #If Mac or IP specified we can only have 1 of those instances...
+            host_template['mac'] = element['mac']
+        if 'ip' in element:
+            self.params.number = 1 #If Mac or IP specified we can only have 1 of those instances...
+            host_template['ip'] = element['ip']
 
         return dict(host_template)
 
@@ -688,7 +688,8 @@ class ForemanTool(LoggingApp):
             proxy = conn.create_smart_proxies(smartProxy)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return proxy
 
     def create_model(self,conn):
@@ -707,7 +708,8 @@ class ForemanTool(LoggingApp):
             model = conn.create_models(model)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return model
 
     def create_compute_resource(self,conn):
@@ -735,7 +737,8 @@ class ForemanTool(LoggingApp):
             resource = conn.create_compute_resources(computeResource)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return resource
 
     def create_subnet(self,conn):
@@ -772,7 +775,8 @@ class ForemanTool(LoggingApp):
             sub = conn.create_subnets(subnet)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return sub
 
     def create_domain(self,conn):
@@ -789,7 +793,8 @@ class ForemanTool(LoggingApp):
             dom = conn.create_domains(domain)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return dom
 
     def create_hostgroup(self,conn):
@@ -824,7 +829,8 @@ class ForemanTool(LoggingApp):
             hostg = conn.create_hostgroups(hostgroup)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return hostg
 
     def create_puppetclass(self,conn):
@@ -837,7 +843,8 @@ class ForemanTool(LoggingApp):
             pclass = conn.create_puppetclasses(puppetclass)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return pclass
 
     def create_hardwaremodel(self,conn):
@@ -856,7 +863,8 @@ class ForemanTool(LoggingApp):
             model = conn.create_models(hardware)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return model
 
     def create_os(self,conn):
@@ -879,7 +887,8 @@ class ForemanTool(LoggingApp):
             operatingsys = conn.create_operatingsystems(os)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return operatingsys
 
     def create_env(self,conn):
@@ -893,7 +902,8 @@ class ForemanTool(LoggingApp):
             environment = conn.create_environments(env)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return environment
 
     def create_install_media(self,conn):
@@ -910,7 +920,8 @@ class ForemanTool(LoggingApp):
             installation = conn.create_media(install)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return installation
 
     def create_provision_template(self,conn):
@@ -936,7 +947,8 @@ class ForemanTool(LoggingApp):
             ptemp = conn.create_config_templates(ptemp)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return ptemp
 
     def create_architecture(self,conn):
@@ -952,7 +964,8 @@ class ForemanTool(LoggingApp):
             architecture = conn.create_architectures(architecture)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return architecture
 
     def create_ldap(self,conn):
@@ -983,7 +996,8 @@ class ForemanTool(LoggingApp):
            auth_source_ldap = conn.create_auth_source_ldaps(auth_source_ldap)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return auth_source_ldap
 
     def create_paramter(self,conn):
@@ -998,7 +1012,8 @@ class ForemanTool(LoggingApp):
              common_paramter = conn.create_common_paramters(common_paramter)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return common_parameter
 
     def create_key(self,conn):
@@ -1022,7 +1037,8 @@ class ForemanTool(LoggingApp):
            lookup_key = conn.create_lookup_keys(lookup_key)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return lookup_key
 
     def create_partitiontable(self,conn):
@@ -1039,7 +1055,8 @@ class ForemanTool(LoggingApp):
            ptable  = conn.create_ptables(ptable)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem creating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return ptable
 
     def create_role(self,conn):
@@ -1141,7 +1158,8 @@ class ForemanTool(LoggingApp):
             host = conn.update_hosts(host['id'],host)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return host
 
     def update_smart_proxy(self,conn,i):
@@ -1159,7 +1177,8 @@ class ForemanTool(LoggingApp):
             proxy = conn.update_smart_proxies(smartProxy['id'],smartProxy)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return proxy
 
     def update_compute_resource(self,conn,i):
@@ -1192,7 +1211,8 @@ class ForemanTool(LoggingApp):
             resource = conn.update_compute_resources(computeResource['id'],computeResource)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return resource
 
     def update_subnet(self,conn,i):
@@ -1231,7 +1251,8 @@ class ForemanTool(LoggingApp):
             sub = conn.update_subnets(subnet['id'],subnet)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return sub
 
     def update_domain(self,conn,i):
@@ -1252,7 +1273,8 @@ class ForemanTool(LoggingApp):
             dom = conn.update_domains(domain['id'],domain)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return dom
 
     def update_hostgroup(self,conn,i):
@@ -1289,7 +1311,8 @@ class ForemanTool(LoggingApp):
             hostgroup = conn.update_hostgroups(hostgroup['id'],hostgroup)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return hostgroup
 
     def update_puppetclass(self,conn,i):
@@ -1304,7 +1327,8 @@ class ForemanTool(LoggingApp):
             pclass = conn.update_puppetclasses(puppetclass['id'],puppetclass)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return pclass
 
     def update_hardwaremodel(self,conn,i):
@@ -1325,7 +1349,8 @@ class ForemanTool(LoggingApp):
             model = conn.update_models(hardware['id'],hardware)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return model
 
     def update_os(self,conn,i):
@@ -1346,7 +1371,8 @@ class ForemanTool(LoggingApp):
             operatingsys = conn.update_operatingsystems(os['id'],os)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return operatingsys
 
     def update_env(self,conn,i):
@@ -1362,7 +1388,8 @@ class ForemanTool(LoggingApp):
             environment = conn.update_environments(env['id'],env)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return environment
 
     def update_install_media(self,conn,i):
@@ -1383,8 +1410,8 @@ class ForemanTool(LoggingApp):
             installation = conn.update_media(install['id'],install)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
-        quit(installation)
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return installation
 
     def update_provision_template(self,conn,i):
@@ -1415,7 +1442,8 @@ class ForemanTool(LoggingApp):
             ptemp = conn.update_config_templates(ptemp['id'],ptemp)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return ptemp
 
     def update_architecture(self,conn,i):
@@ -1433,7 +1461,8 @@ class ForemanTool(LoggingApp):
             architecture = conn.update_architectures(architecture['id'],architecture)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return architecture
 
     def update_ldap(self,conn,i):
@@ -1472,6 +1501,8 @@ class ForemanTool(LoggingApp):
         except Exception as e:
             self.log.error(e)
             quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return auth_source_ldap
 
     def update_paramter(self,conn,i):
@@ -1489,7 +1520,8 @@ class ForemanTool(LoggingApp):
              common_paramter = conn.update_common_paramters(common_paramter['id'],common_paramter)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return common_parameter
 
     def update_key(self,conn,i):
@@ -1515,7 +1547,8 @@ class ForemanTool(LoggingApp):
            lookup_key = conn.update_lookup_keys(lookup_key['id'],lookup_key)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return lookup_key
 
     def update_partitiontable(self,conn,i):
@@ -1535,7 +1568,8 @@ class ForemanTool(LoggingApp):
             ptable  = conn.update_ptables(ptable['id'],ptable)
         except Exception as e:
             self.log.error(e)
-            quit("There was a problem updating your " + str(self.params.function))
+            self.log.error("There was a problem creating your " + str(self.params.function))
+            return
         return ptable
 
     def update_role(self,conn,i):
@@ -1612,7 +1646,10 @@ class ForemanTool(LoggingApp):
         else:
             returned = elements[0]
         if "id" not in returned:
-            returned = returned[returned.keys()[0]]
+            try:
+                returned = returned[returned.keys()[0]]
+            except Exception as e:
+                return
         return int(returned['id'])
 
 #===========================MAIN===========================#
