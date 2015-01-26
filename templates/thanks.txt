@@ -1,0 +1,3 @@
+Just a Thank You note to people who contribute Templates to the project
+
+ec2.json - plus ideas and code! - @beeva-javiermartincaro

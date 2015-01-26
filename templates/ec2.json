@@ -1,0 +1,39 @@
+{
+    "name": "@name@",
+    "organization_id": "@organization_id@",
+    "root_pass": "@root_pass@",
+    "comment": "@comment@",
+    "compute_resource_id": "@compute_resource_id@",
+    "managed": "true",
+    "model_id": "",
+    "provision_method": "image",
+    "interfaces_attributes": {
+            "new_interfaces": {
+                        "name": "",
+                        "ip": "",
+                        "provider": "IPMI",
+                        "mac": "",
+                        "_destroy": "false",
+                        "type": "Nic::Managed",
+                        "domain_id": ""
+                    }
+        },
+    "disk": "",
+    "overwrite": "false",
+    "puppet_status": 1,
+    "build": "1",
+    "type": "Host::Managed",
+    "mac": "flavor",
+    "medium_id": "@medium_id@",
+    "enabled": "1",
+    "hostgroup_id": "@hostgroup_id@",
+    "compute_attributes": {
+            "flavor_id": "@flavor@",
+            "availability_zone": "",
+            "subnet_id": "@subnet_id@",
+            "security_group_ids": "@security_group_ids@",
+            "managed_ip": "private",
+            "image_id": "@ami@"
+        },
+    "puppetclass_ids": []
+}

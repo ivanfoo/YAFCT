@@ -378,6 +378,14 @@ class ForemanTool(LoggingApp):
             if function == "PuppetClass":
                 temp = []
                 for w in resp:
+                    # Loop for extracting subclasses from name - Taken with thanks from @beeva-javiermartincaro
+                    length=len(resp[w])
+                    if length > 1:
+                        for i in range(length):
+                           temp.append(resp[w][i]['puppetclass'])
+                    else:
+                        temp.append(resp[w][0]['puppetclass'])
+                    # End loop
                     temp.append(resp[w][0]['puppetclass'])
                 resp = temp
             hosts += resp
@@ -449,10 +457,11 @@ class ForemanTool(LoggingApp):
             zfill = len(settings['instance_zfill'])
         data = self.params.extra
         if 'ip' in self.params.extra:
-            data['interfaces_attributes']['new_interfaces']['ip'] = self.params.extra['ip']
+            data['ip'] = self.params.extra['ip']
+            #data['interfaces_attributes']['new_interfaces']['ip'] = self.params.extra['ip']
         if 'mac' in self.params.extra:
             data['mac'] = self.params.extra['mac']
-            data['interfaces_attributes']['new_interfaces']['mac'] = self.params.extra['mac']
+            #data['interfaces_attributes']['new_interfaces']['mac'] = self.params.extra['mac']
         #switch for while loop
         total = index + int(self.params.number)
         while index < total:
@@ -566,8 +575,9 @@ class ForemanTool(LoggingApp):
             self.params.number = int(element['number'])
         settings = yaml.load(open(self.params.config))['settings']
         for key in element:
-            host_template = host_template.replace(settings['token_char'] + str(key) + settings['token_char'], str(element[key]))
+            host_template = host_template.replace(settings['token_char'] + str(key) + settings['token_char'], str(element[key])).replace("'",'"')
         host_template = json.loads(host_template)
+
         return dict(host_template)
 
     def create(self,conn,element):
@@ -1602,7 +1612,6 @@ class ForemanTool(LoggingApp):
         else:
             returned = elements[0]
         if "id" not in returned:
-            print returned
             returned = returned[returned.keys()[0]]
         return int(returned['id'])
 
@@ -1665,5 +1674,6 @@ if __name__ == "__main__":
     foremanTool.add_param("-p", "--pretty", help="Allow Pretty printing when indexing", default=False, required=False, action="store_true")
     foremanTool.add_param("-A", "--auto", help="Changes script to not prompt for guidance - USE WITH CAUTION!", default=False, required=False, action="store_true")
     foremanTool.add_param("-T", "--tokenize", help="Action to decide if the runlist needs to be de-tokenized - reqires a definitions.py file in the same dir", default=None, required=False, action="store_true")
+    foremanTool.add_param("-D", "--definitions", help="Allows multiple definition files to be imported for tokenizing operations", default=None, required=False, action="append")
 
     foremanTool.run()

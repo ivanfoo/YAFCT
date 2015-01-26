@@ -34,6 +34,7 @@ optional arguments:
 -A, --auto                        Changes script to not prompt for guidance - USE WITH CAUTION!
 -T, --tokenize                    Action to decide if the runlist needs to be de-tokenized - reqires a definitions.py 
                                   file in the same dir.
+-D --definitions                  Allows multiple definition files to be imported for tokenizing operations by path to a json file
 ```
 
 Assumptions
@@ -59,6 +60,11 @@ $ pip install -r requirements.txt
 
 ```
 ---
+settings:
+  token_char: "@"
+  entries_per_page: 100
+  instance_zfill: "000"
+
 foreman:
   DATACENTRE-1: #Farm Name
     protocol: "https"
@@ -132,11 +138,13 @@ Definitions and Tokenisation
 
 > The Definitions file is where the script gets it's information to tokenise the scripts, runlists and data supplied to creations commands.
 > It is a python Dictionary and it pretty easy to understand. Just add your Key and Value to this file and the add your Key to any script or runlist to allow it be detokenised.
+> Multiple values can be added to the definitions on initiation of the script with the -D flag and a providing a relative path to a json file or actual json itself can be parsed.
 
 ```
 #!/usr/bin/env python
 
 #If a token requires another token then please specify it before the needed token
+import json
 
 def definitions(self):
     definitions = {
@@ -146,6 +154,18 @@ def definitions(self):
       '@DC_LOWER@'                       : str(self.params.farm).lower(),
       '@DC_UPPER@'                       : self.params.farm,
     }
+
+    if self.params.definitions:
+        for extra in self.params.definitions:
+            if str(extra).startswith("{"):
+                extra_data = json.loads(extra)
+            else:
+                try:
+                    extra_data = json.loads(open(str(extra))
+                except Exception:
+                    continue
+            definitions.update(extra_data)
+    return definitions
 ```
 
 Modes
