@@ -60,16 +60,33 @@ class ForemanTool(LoggingApp):
 
     def delete_instances(self,conn):
         hosts = self.index_instances(conn)
+        func = self.params.function
         if len(hosts) == 0:
             quit("There are no instances that match what you are looking for.. quitting!")
         for host in hosts:
-            host_id = host['host']['id']
+            # handle host and hostgroup deletion
+            if func == "Host":
+                key = 'host'
+            elif func == "HostGroup":
+                key = 'hostgroup'
+            else:
+                quit("Sorry, there is no delete method for this function implemented yet")
+            #use key string for returning id
+            host_id = host[key]['id']
             if self.params.auto != True:
-                resp = raw_input("\nWould you like to Delete " + host['host']['name']  + "?: [y/n]")
+                resp = raw_input("\nWould you like to Delete " + key + " " + host[key]['name']  + "?: [y/n]")
                 if resp in ['y','ye','yes','Y','Ye','Yes','YES', 'YE']:
-                    conn.destroy_hosts(host_id)
+                    # handle host and hostgroup deletion
+                    try:
+                        if func == "Host":
+                            conn.destroy_hosts(host_id)
+                        if func == "HostGroup":
+                            conn.destroy_hostgroups(host_id)
+                    except Exception as e:
+                        self.log.error(e)
+                        quit('There was an error trying to delete ' + key + str(host_id) + " - " + host[key]['name'])
                 else:
-                    self.log.warn("Not operating on " + str(host_id) + " - " + host['host']['name'] )
+                    self.log.warn("Not operating on " + key + " " + str(host_id) + " - " + host[key]['name'] )
                     continue
             else:
                 conn.destroy(host_id)
@@ -102,7 +119,7 @@ class ForemanTool(LoggingApp):
         elif func == "HostGroup":
             self.log.info(conn.show_hostgroups(i))
             resp = conn.destroy_hostgroups(i)
-        elif func == "Host": 
+        elif func == "Host":
             self.log.info(conn.show_hosts(i))
             resp = conn.destroy_hosts(i)
         elif func == "LookupKey":
@@ -321,7 +338,7 @@ class ForemanTool(LoggingApp):
             elif function == "LDAP":
                 resp = conn.index_auth_source_ldaps(page=page,per_page=per_page)
             elif function == "Bookmark":
-                resp = conn.index_bookmarks(page=page,per_page=per_page) 
+                resp = conn.index_bookmarks(page=page,per_page=per_page)
             elif function == "Parameter":
                 resp = conn.index_common_parameters(page=page,per_page=per_page)
             elif function == "ComputeResource":
@@ -342,7 +359,7 @@ class ForemanTool(LoggingApp):
                 resp = conn.index_hostgroups(page=page,per_page=per_page)
             elif function == "LookupKey":
                 resp = conn.index_lookup_keys(page=page,per_page=per_page)
-            elif function == "InstallMedia": 
+            elif function == "InstallMedia":
                 resp = conn.index_media(page=page,per_page=per_page)
             elif function == "Model":
                 resp = conn.index_models(page=page,per_page=per_page)
@@ -378,14 +395,15 @@ class ForemanTool(LoggingApp):
             if function == "PuppetClass":
                 temp = []
                 for w in resp:
-                # Loop for extracting subclasses from name
+                    # Loop for extracting subclasses from name - Taken with thanks from @beeva-javiermartincaro
                     length=len(resp[w])
-                    if length > 1: 
+                    if length > 1:
                         for i in range(length):
-                            temp.append(resp[w][i]['puppetclass'])
+                           temp.append(resp[w][i]['puppetclass'])
                     else:
                         temp.append(resp[w][0]['puppetclass'])
-                # End loop
+                    # End loop
+                    temp.append(resp[w][0]['puppetclass'])
                 resp = temp
             hosts += resp
         if search != None:
@@ -453,17 +471,29 @@ class ForemanTool(LoggingApp):
             index = int(basename[-zfill:])
         else:
             index = len(self.index_instances(conn))
-            zfill = len(settings['instance_zfill'])
+            #use zfill as False if specified in the settings
+            if settings['instance_zfill'] == False:
+                zfill = False
+            else:
+                zfill = len(settings['instance_zfill'])
         data = self.params.extra
         if 'ip' in self.params.extra:
-            data['interfaces_attributes']['new_interfaces']['ip'] = self.params.extra['ip']
+            data['ip'] = self.params.extra['ip']
+            #data['interfaces_attributes']['new_interfaces']['ip'] = self.params.extra['ip']
         if 'mac' in self.params.extra:
             data['mac'] = self.params.extra['mac']
-            data['interfaces_attributes']['new_interfaces']['mac'] = self.params.extra['mac']
+            #data['interfaces_attributes']['new_interfaces']['mac'] = self.params.extra['mac']
         #switch for while loop
         total = index + int(self.params.number)
         while index < total:
-            data['name'] = basename + '-'  + str(index + 1).zfill(zfill)
+            if zfill == False:
+                #if total is 1 and zfill is False, don't append nothing to the basename
+                if total == 1:
+                    data['name'] = basename
+                else:
+                    quit('if zfill is False you cannot launch multiple instances with the same basename')
+            else:
+                data['name'] = basename + '-'  + str(index + 1).zfill(zfill)
             try:
                 info = conn.create_hosts(data)
                 self.log.info(info)
@@ -573,8 +603,9 @@ class ForemanTool(LoggingApp):
             self.params.number = int(element['number'])
         settings = yaml.load(open(self.params.config))['settings']
         for key in element:
-            host_template = host_template.replace(settings['token_char'] + str(key) + settings['token_char'], str(element[key]))
+            host_template = host_template.replace(settings['token_char'] + str(key) + settings['token_char'], str(element[key])).replace("'",'"')
         host_template = json.loads(host_template)
+
         return dict(host_template)
 
     def create(self,conn,element):
@@ -999,7 +1030,7 @@ class ForemanTool(LoggingApp):
         return common_parameter
 
     def create_key(self,conn):
-        lookup_key = {} 
+        lookup_key = {}
         try:
             lookup_key['key'] = self.params.name
         except KeyError as e:
@@ -1490,7 +1521,7 @@ class ForemanTool(LoggingApp):
         return common_parameter
 
     def update_key(self,conn,i):
-        lookup_key = {} 
+        lookup_key = {}
         try:
             lookup_key['id'] = i
         except KeyError as e:
@@ -1609,7 +1640,6 @@ class ForemanTool(LoggingApp):
         else:
             returned = elements[0]
         if "id" not in returned:
-            print returned
             returned = returned[returned.keys()[0]]
         return int(returned['id'])
 
@@ -1672,5 +1702,6 @@ if __name__ == "__main__":
     foremanTool.add_param("-p", "--pretty", help="Allow Pretty printing when indexing", default=False, required=False, action="store_true")
     foremanTool.add_param("-A", "--auto", help="Changes script to not prompt for guidance - USE WITH CAUTION!", default=False, required=False, action="store_true")
     foremanTool.add_param("-T", "--tokenize", help="Action to decide if the runlist needs to be de-tokenized - reqires a definitions.py file in the same dir", default=None, required=False, action="store_true")
+    foremanTool.add_param("-D", "--definitions", help="Allows multiple definition files to be imported for tokenizing operations", default=None, required=False, action="append")
 
     foremanTool.run()
