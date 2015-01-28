@@ -63,7 +63,7 @@ $ pip install -r requirements.txt
 settings:
   token_char: "@"
   entries_per_page: 100
-  instance_zfill: "000"
+  instance_zfill: "000" #Using 'instance_zfill: False' disables this feature if the number of instances to create is 1
 
 foreman:
   DATACENTRE-1: #Farm Name
