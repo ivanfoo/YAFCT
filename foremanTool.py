@@ -60,16 +60,33 @@ class ForemanTool(LoggingApp):
 
     def delete_instances(self,conn):
         hosts = self.index_instances(conn)
+        func = self.params.function
         if len(hosts) == 0:
             quit("There are no instances that match what you are looking for.. quitting!")
         for host in hosts:
-            host_id = host['host']['id']
+            # handle host and hostgroup deletion
+            if func == "Host":
+                key = 'host'
+            elif func == "HostGroup":
+                key = 'hostgroup'
+            else:
+                quit("Sorry, there is no delete method for this function implemented yet")
+            #use key string for returning id
+            host_id = host[key]['id']
             if self.params.auto != True:
-                resp = raw_input("\nWould you like to Delete " + host['host']['name']  + "?: [y/n]")
+                resp = raw_input("\nWould you like to Delete " + key + " " + host[key]['name']  + "?: [y/n]")
                 if resp in ['y','ye','yes','Y','Ye','Yes','YES', 'YE']:
-                    conn.destroy_hosts(host_id)
+                    # handle host and hostgroup deletion
+                    try:
+                        if func == "Host":
+                            conn.destroy_hosts(host_id)
+                        if func == "HostGroup":
+                            conn.destroy_hostgroups(host_id)
+                    except Exception as e:
+                        self.log.error(e)
+                        quit('There was an error trying to delete ' + key + str(host_id) + " - " + host[key]['name'])
                 else:
-                    self.log.warn("Not operating on " + str(host_id) + " - " + host['host']['name'] )
+                    self.log.warn("Not operating on " + key + " " + str(host_id) + " - " + host[key]['name'] )
                     continue
             else:
                 conn.destroy(host_id)
@@ -102,7 +119,7 @@ class ForemanTool(LoggingApp):
         elif func == "HostGroup":
             self.log.info(conn.show_hostgroups(i))
             resp = conn.destroy_hostgroups(i)
-        elif func == "Host": 
+        elif func == "Host":
             self.log.info(conn.show_hosts(i))
             resp = conn.destroy_hosts(i)
         elif func == "LookupKey":
@@ -321,7 +338,7 @@ class ForemanTool(LoggingApp):
             elif function == "LDAP":
                 resp = conn.index_auth_source_ldaps(page=page,per_page=per_page)
             elif function == "Bookmark":
-                resp = conn.index_bookmarks(page=page,per_page=per_page) 
+                resp = conn.index_bookmarks(page=page,per_page=per_page)
             elif function == "Parameter":
                 resp = conn.index_common_parameters(page=page,per_page=per_page)
             elif function == "ComputeResource":
@@ -342,7 +359,7 @@ class ForemanTool(LoggingApp):
                 resp = conn.index_hostgroups(page=page,per_page=per_page)
             elif function == "LookupKey":
                 resp = conn.index_lookup_keys(page=page,per_page=per_page)
-            elif function == "InstallMedia": 
+            elif function == "InstallMedia":
                 resp = conn.index_media(page=page,per_page=per_page)
             elif function == "Model":
                 resp = conn.index_models(page=page,per_page=per_page)
@@ -454,12 +471,23 @@ class ForemanTool(LoggingApp):
             index = int(basename[-zfill:])
         else:
             index = len(self.index_instances(conn))
-            zfill = len(settings['instance_zfill'])
+            #use zfill as False if specified in the settings
+            if settings['instance_zfill'] == False:
+                zfill = False
+            else:
+                zfill = len(settings['instance_zfill'])
         data = self.params.extra
         #switch for while loop
         total = index + int(self.params.number)
         while index < total:
-            data['name'] = basename + '-'  + str(index + 1).zfill(zfill)
+            if zfill == False:
+                #if total is 1 and zfill is False, don't append nothing to the basename
+                if total == 1:
+                    data['name'] = basename
+                else:
+                    quit('if zfill is False you cannot launch multiple instances with the same basename')
+            else:
+                data['name'] = basename + '-'  + str(index + 1).zfill(zfill)
             try:
                 info = conn.create_hosts(data)
                 self.log.info(info)
@@ -1017,7 +1045,7 @@ class ForemanTool(LoggingApp):
         return common_parameter
 
     def create_key(self,conn):
-        lookup_key = {} 
+        lookup_key = {}
         try:
             lookup_key['key'] = self.params.name
         except KeyError as e:
@@ -1525,7 +1553,7 @@ class ForemanTool(LoggingApp):
         return common_parameter
 
     def update_key(self,conn,i):
-        lookup_key = {} 
+        lookup_key = {}
         try:
             lookup_key['id'] = i
         except KeyError as e:

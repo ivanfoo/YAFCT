@@ -31,7 +31,7 @@
             "flavor_id": "@flavor@",
             "availability_zone": "",
             "subnet_id": "@subnet_id@",
-            "security_group_ids": "@security_group_ids@",
+            "security_group_ids": @security_group_ids@,
             "managed_ip": "private",
             "image_id": "@ami@"
         },
