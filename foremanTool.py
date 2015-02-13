@@ -230,6 +230,14 @@ class ForemanTool(LoggingApp):
                                 self.log.debug("Looking up - " + str(key3))
                                 element[key][key2][key3] = self.lookup_element(conn,element[key][key2][key3])
                         continue
+                    if type(element[key][key2]) == list:
+                        for i in element[key][key2]:
+                            if type(i) == int:
+                                continue
+                            if i.startswith('LookUp('):
+                                self.log.debug("Looking up - " + str(key2))
+                                replacement.append(self.lookup_element(conn,i))
+                        continue
                     if element[key][key2].startswith('LookUp('):
                         self.log.debug("Looking up - " + str(key2))
                         element[key][key2] = self.lookup_element(conn,element[key][key2])
@@ -267,7 +275,7 @@ class ForemanTool(LoggingApp):
             resp = self.update_hostgroup(conn,i)
         elif func == "Host":
             self.log.info(conn.show_hosts(i))
-            resp = conn.update_host(conn,i)
+            resp = self.update_host(conn,i)
         elif func == "ProvisionTemplate":
             self.log.info(conn.show_config_templates(i))
             resp = self.update_provision_template(conn,i)
@@ -589,9 +597,18 @@ class ForemanTool(LoggingApp):
                     self.log.error(self.create(conn,element))
                 else:
                     self.log.error(self.update(conn))
+            elif method == "create-once":
+                self.params.extra = element
+                i = self.index_instances(conn)
+                if len(i) == 0:
+                    self.log.debug("Could not find what you wanted to update, creating...")
+                    self.log.error(self.create(conn,element))
+                else:
+                    self.log.debug("detected method 'create-once' and element already created. None action taken")
             elif method == "delete":
                 self.log.error(self.delete_instances(conn))
             elif method == "none":
+                self.log.debug("detected method 'none'. None action taken")
                 continue
             else:
                 self.log.error("Method " + method + " has not been created yet!")
@@ -1160,7 +1177,7 @@ class ForemanTool(LoggingApp):
         if 'ptable_id' in self.params.extra:
             host['ptable_id'] = self.params.extra['ptable_id']
         if 'hostgroup_id' in self.params.extra:
-            host['hostgroup_id'] = self.params.extra['hostgroup']
+            host['hostgroup_id'] = self.params.extra['hostgroup_id']
         if 'sp_subnet_id' in self.params.extra:
             host['sp_subnet_id']= self.params.extra['sp_subnet_id']
         if 'subnet_id' in self.params.extra:
@@ -1175,6 +1192,9 @@ class ForemanTool(LoggingApp):
             host['image_id'] = self.params.extra['image_id']
         if 'medium_id' in self.params.extra:
             host['medium_id'] = self.params.extra['medium_id']
+        if 'compute_attributes' in self.params.extra:
+            host['compute_attributes'] = self.params.extra['compute_attributes']
+
         try:
             host = conn.update_hosts(host['id'],host)
         except Exception as e:
