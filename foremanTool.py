@@ -89,8 +89,14 @@ class ForemanTool(LoggingApp):
                     self.log.warn("Not operating on " + key + " " + str(host_id) + " - " + host[key]['name'] )
                     continue
             else:
-                conn.destroy(host_id)
-
+                try:
+                    if func == "Host":
+                        conn.destroy_hosts(host_id)
+                    if func == "HostGroup":
+                        conn.destroy_hostgroups(hosts_id)
+                except Exception as e:
+                    self.log.error(e)
+                    quit('There was an error trying to delete ' + key + str(host_id) + " - " + host[key]['name'])
     def destroy(self,conn,i):
         func = self.params.function
         if func == "Architecture":
