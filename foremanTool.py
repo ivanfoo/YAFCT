@@ -581,8 +581,18 @@ class ForemanTool(LoggingApp):
             elif method == "update":
                 self.params.extra = element
                 self.log.error(self.update(conn))
+            elif method == "update-create":
+                self.params.extra = element
+                i = self.index_instances(conn)
+                if len(i) == 0:
+                    self.log.debug("Could not find what you wanted to update, creating...")
+                    self.log.error(self.create(conn,element))
+                else:
+                    self.log.error(self.update(conn))
             elif method == "delete":
                 self.log.error(self.delete_instances(conn))
+            elif method == "none":
+                continue
             else:
                 self.log.error("Method " + method + " has not been created yet!")
                 continue
