@@ -23,7 +23,6 @@
     "puppet_status": 1,
     "build": "1",
     "type": "Host::Managed",
-    "mac": "flavor",
     "medium_id": "@medium_id@",
     "enabled": "1",
     "hostgroup_id": "@hostgroup_id@",
