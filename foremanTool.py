@@ -477,12 +477,8 @@ class ForemanTool(LoggingApp):
         settings = yaml.load(open(self.params.config))['settings']
         basename = self.params.name
         if basename[-1].isdigit() == True:
-            #sort this out
-            zfill = 1
-            while basename[-zfill].isdigit() == True:
-                zfill += 1
-            zfill -= 1
-            index = int(basename[-zfill:])
+            index = 0
+            zfill = False
         else:
             index = len(self.index_instances(conn))
             #use zfill as False if specified in the settings
