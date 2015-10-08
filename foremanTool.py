@@ -881,6 +881,10 @@ class ForemanTool(LoggingApp):
             hostgroup['root_pass'] = self.params.extra['root_pass']
         if 'domain_id' in self.params.extra:
             hostgroup['domain_id'] = self.params.extra['domain_id']
+        if 'location_ids' in self.params.extra:
+            hostgroup['location_ids'] = self.params.extra['location_ids']
+        if 'organization_ids' in self.params.extra:
+            hostgroup['organization_ids'] = self.params.extra['organization_ids']
         try:
             hostg = conn.create_hostgroups(hostgroup)
         except Exception as e:
